@@ -11,7 +11,7 @@ use llrt_modules::{
 use rquickjs::{
     async_with,
     loader::{BuiltinResolver, ModuleLoader},
-    AsyncContext, AsyncRuntime, Error, Function, Module,
+    AsyncContext, AsyncRuntime, CatchResultExt, CaughtError, Error, Function, Module,
 };
 
 #[tokio::main]
@@ -37,6 +37,7 @@ async fn main() {
     runtime.set_loader(resolver, loader).await;
     init_context(&context).await;
 
+    // if use Promise，the Future will be  !Send, so it always should using async_with! macro
     // let fut = context.async_with(|ctx|{
     //     Box::pin(async move {
     //         let script = std::fs::read_to_string(&cli.file).unwrap();
@@ -73,30 +74,16 @@ async fn main() {
             }
         }
         let promise = rslt.unwrap();
-        promise.into_future::<()>().await?;
-        Ok::<_,Error>(())
-    })
-    ;
-    let rslt = fut.await;
-
-    context.with(move |ctx|{
+        let rslt = promise.into_future::<()>().await.catch(&ctx);
         if let Err(ref err) = rslt {
-            match err {
-                Error::Exception => {
-                    println!("javascript exception: {:?}", ctx.catch());
-                },
-                _ => {
-                    println!("rquickjs error: {}", err);
-                },
-            }
+            println!("javascript error: {:?}", err);
         }
+        Ok::<_,Error>(())
     });
-    
-    
+    let _rslt = fut.await.unwrap();
 
     runtime.idle().await;
 }
-
 
 fn print(s: String) {
     println!("{s}")

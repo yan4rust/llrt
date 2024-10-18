@@ -10,5 +10,6 @@
   "editor.formatOnPaste": true,
   "editor.formatOnSave": true,
   "yaml.format.singleQuote": false,
-  "makefile.configureOnOpen": false
+  "makefile.configureOnOpen": false,
+  "rust-analyzer.checkOnSave": false
 }
