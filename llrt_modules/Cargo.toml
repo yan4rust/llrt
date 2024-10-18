@@ -114,3 +114,15 @@ windows-version = { version = "0.1", optional = true }
 nanoid = "0.4.0"
 rand = "0.8.5"
 tokio = { version = "1", features = ["full"] }
+clap = { version = "4.5.20", features = ["derive"] } 
+# rquickjs = { git = "https://github.com/DelSkayn/rquickjs.git", rev = "3af3f46b13eb89a2694e5e4e2e73924a20fa9dd1", features = [
+#   "full",
+# ] }
+
+rquickjs = { git = "https://github.com/DelSkayn/rquickjs.git", rev = "3af3f46b13eb89a2694e5e4e2e73924a20fa9dd1", features = [
+  "array-buffer",
+  "either",
+  "macro",
+  "futures",
+  "loader",
+], default-features = false }

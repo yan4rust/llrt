@@ -21,3 +21,4 @@ out.stacks
 yarn-error.log
 llrt-container-*
 bootstrap
+Cargo.lock
