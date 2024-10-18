@@ -1,4 +1,4 @@
-globalThis._require = require;
+globalThis._require = require; //used to preserve require during bundling/minification
 
 const CWD = process.cwd();
 
@@ -77,4 +77,15 @@ it("should be able to use node module with prefix `node:` with require", () => {
   consoleObj.warn("warn");
   consoleObj.error("error");
   consoleObj.trace("trace");
+});
+
+it("should be able to import exported functions", () => {
+  const importedFunction = _require(`${CWD}/fixtures/export-function.cjs`);
+  expect(importedFunction()).toBe("hello world!");
+});
+
+it("should return same value for multiple require statements", () => {
+  const a = _require(`${CWD}/fixtures/e.cjs`);
+  const b = _require(`${CWD}/fixtures/e.cjs`);
+  expect(a).toStrictEqual(b);
 });
