@@ -1,14 +1,19 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 use std::{
+    collections::HashSet,
     fmt::Write as FormatWrite,
     io::{stderr, stdout, IsTerminal, Write},
     sync::atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 
 use chrono::{DateTime, Utc};
-use fxhash::FxHashSet;
-use llrt_utils::{class::get_class_name, object::CreateSymbol};
+use llrt_json::{escape::escape_json, stringify::json_stringify};
+use llrt_numbers::float_to_string;
+use llrt_utils::{
+    class::get_class_name,
+    primordials::{BasePrimordials, Primordial},
+};
 use rquickjs::{
     atom::PredefinedAtom,
     function::This,
@@ -18,17 +23,13 @@ use rquickjs::{
     Array, Class, Coerced, Ctx, Function, Object, Result, Symbol, Type, Value,
 };
 
-use crate::json::stringify::json_stringify;
-use crate::module_builder::ModuleInfo;
 use crate::modules::module::export_default;
-use crate::number::float_to_string;
-use crate::{json::escape::escape_json, runtime_client, utils::result::ResultExt};
+use crate::runtime_client;
+use crate::{module_builder::ModuleInfo, utils::hash};
 
 pub static AWS_LAMBDA_MODE: AtomicBool = AtomicBool::new(false);
 pub static AWS_LAMBDA_JSON_LOG_FORMAT: AtomicBool = AtomicBool::new(false);
 pub static AWS_LAMBDA_JSON_LOG_LEVEL: AtomicUsize = AtomicUsize::new(LogLevel::Info as usize);
-
-use llrt_utils::class::CUSTOM_INSPECT_SYMBOL_DESCRIPTION;
 
 const NEWLINE: char = '\n';
 const SPACING: char = ' ';
@@ -137,8 +138,6 @@ impl ModuleDef for ConsoleModule {
     }
 
     fn evaluate<'js>(ctx: &Ctx<'js>, exports: &Exports<'js>) -> Result<()> {
-        Class::<Console>::register(ctx)?;
-
         export_default(ctx, exports, |default| {
             Class::<Console>::define(default)?;
 
@@ -247,7 +246,7 @@ fn format_raw<'js>(
     value: Value<'js>,
     options: &FormatOptions<'js>,
 ) -> Result<()> {
-    format_raw_inner(result, value, options, &mut FxHashSet::default(), 0)?;
+    format_raw_inner(result, value, options, &mut HashSet::default(), 0)?;
     Ok(())
 }
 
@@ -260,7 +259,7 @@ fn format_raw_inner<'js>(
     result: &mut String,
     value: Value<'js>,
     options: &FormatOptions<'js>,
-    visited: &mut FxHashSet<usize>,
+    visited: &mut HashSet<usize>,
     depth: usize,
 ) -> Result<()> {
     let value_type = value.type_of();
@@ -351,7 +350,7 @@ fn format_raw_inner<'js>(
             return Ok(());
         },
         Type::Array | Type::Object | Type::Exception => {
-            let hash = fxhash::hash(&value);
+            let hash = hash::default_hash(&value);
             if visited.contains(&hash) {
                 Color::CYAN.push(result, color_enabled_mask);
                 result.push_str(CIRCULAR);
@@ -359,6 +358,7 @@ fn format_raw_inner<'js>(
                 return Ok(());
             }
             visited.insert(hash);
+
             let obj = unsafe { value.as_object().unwrap_unchecked() };
 
             if value.is_error() {
@@ -495,7 +495,7 @@ fn write_object<'js>(
     result: &mut String,
     obj: &Object<'js>,
     options: &FormatOptions<'js>,
-    visited: &mut FxHashSet<usize>,
+    visited: &mut HashSet<usize>,
     depth: usize,
     color_enabled_mask: usize,
     is_array: bool,
@@ -672,23 +672,18 @@ struct FormatOptions<'js> {
 }
 impl<'js> FormatOptions<'js> {
     fn new(ctx: &Ctx<'js>, color: bool, newline: bool) -> Result<Self> {
-        let globals = ctx.globals();
-        let default_obj = Object::new(ctx.clone())?;
-        let object_ctor: Object = default_obj.get(PredefinedAtom::Constructor)?;
-        let object_prototype = default_obj
-            .get_prototype()
-            .ok_or("Can't get prototype")
-            .or_throw(ctx)?;
-        let get_own_property_desc_fn: Function =
-            object_ctor.get(PredefinedAtom::GetOwnPropertyDescriptor)?;
+        let primordials = BasePrimordials::get(ctx)?;
 
-        let number_function = globals.get(PredefinedAtom::Number)?;
-        let parse_float = globals.get("parseFloat")?;
-        let parse_int = globals.get("parseInt")?;
+        let get_own_property_desc_fn = primordials.function_get_own_property_descriptor.clone();
+        let object_prototype = primordials.prototype_object.clone();
+
+        let parse_float = primordials.function_parse_float.clone();
+        let parse_int = primordials.function_parse_int.clone();
 
         let object_filter = Filter::new().private().string().symbol();
-        let custom_inspect_symbol =
-            Symbol::for_description(&globals, CUSTOM_INSPECT_SYMBOL_DESCRIPTION)?;
+
+        let custom_inspect_symbol = primordials.symbol_custom_inspect.clone();
+        let number_function = primordials.function_number.clone();
 
         let options = FormatOptions {
             color,
@@ -953,7 +948,7 @@ fn get_dimensions(ctx: Ctx<'_>) -> Result<Array<'_>> {
     Ok(array)
 }
 
-#[derive(rquickjs::class::Trace)]
+#[derive(rquickjs::class::Trace, rquickjs::JsLifetime)]
 #[rquickjs::class]
 pub struct Console {}
 
@@ -998,18 +993,15 @@ impl Console {
 
 #[cfg(test)]
 mod tests {
-
+    use llrt_json::stringify::json_stringify_replacer_space;
+    use llrt_test::test_sync_with;
     use rquickjs::{function::Rest, Error, IntoJs, Null, Object, Undefined, Value};
 
-    use crate::{
-        json::stringify::json_stringify_replacer_space,
-        modules::console::{write_lambda_log, LogLevel},
-        test_utils::utils::with_js_runtime,
-    };
+    use crate::modules::console::{write_lambda_log, LogLevel};
 
     #[tokio::test]
     async fn json_log_format() {
-        with_js_runtime(|ctx| {
+        test_sync_with(|ctx| {
             let write_log = |args| {
                 let mut result = String::new();
 
@@ -1023,7 +1015,6 @@ mod tests {
                     LogLevel::Info as usize,
                     "",
                 )?;
-
 
                 //validate json
                 ctx.json_parse(result.clone())?;
@@ -1092,7 +1083,7 @@ mod tests {
 
     #[tokio::test]
     async fn standard_log_format() {
-        with_js_runtime(|ctx| {
+        test_sync_with(|ctx| {
             let write_log = |args| {
                 let mut result = String::new();
 

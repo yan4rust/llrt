@@ -3,6 +3,10 @@
 > [!NOTE]
 > The long term goal for LLRT is to become [Winter CG compliant](https://github.com/wintercg/admin/blob/main/proposals.md). Not every API from Node.js will be supported.
 
+## assert
+
+[ok](https://nodejs.org/api/assert.html#assertokvalue-message)
+
 ## buffer
 
 [alloc](https://nodejs.org/api/buffer.html#static-method-bufferallocsize-fill-encoding)
@@ -10,6 +14,10 @@
 [byteLength](https://nodejs.org/api/buffer.html#static-method-bufferbytelengthstring-encoding)
 
 [concat](https://nodejs.org/api/buffer.html#static-method-bufferconcatlist-totallength)
+
+[constants.MAX_LENGTH](https://nodejs.org/api/buffer.html#bufferconstantsmax_length)
+
+[constants.MAX_STRING_LENGTH](https://nodejs.org/api/buffer.html#bufferconstantsmax_string_length)
 
 [from](https://nodejs.org/api/buffer.html#static-method-bufferfromarray)
 
@@ -129,13 +137,49 @@ Available globally
 
 ## os
 
+[arch](https://nodejs.org/api/os.html#osarch)
+
+[availableParallelism](https://nodejs.org/api/os.html#osavailableparallelism)
+
+[cpus](https://nodejs.org/api/os.html#oscpus)
+
+[devNull](https://nodejs.org/api/os.html#osdevnull)
+
+[endianness](https://nodejs.org/api/os.html#osendianness)
+
+[EOL](https://nodejs.org/api/os.html#oseol)
+
+[freemem](https://nodejs.org/api/os.html#osfreemem)
+
+[getPriority](https://nodejs.org/api/os.html#osgetprioritypid)
+
+[homedir](https://nodejs.org/api/os.html#oshomedir)
+
+[hostname](https://nodejs.org/api/os.html#oshostname)
+
+[loadavg](https://nodejs.org/api/os.html#osloadavg)
+
+[machine](https://nodejs.org/api/os.html#osmachine)
+
+[networkInterfaces](https://nodejs.org/api/os.html#osnetworkinterfaces)
+
 [platform](https://nodejs.org/api/os.html#osplatform)
 
 [release](https://nodejs.org/api/os.html#osrelease)
 
+[setPriority](https://nodejs.org/api/os.html#ossetprioritypid-priority)
+
 [tmpdir](https://nodejs.org/api/os.html#osplatform)
 
+[totalmem](https://nodejs.org/api/os.html#ostotalmem)
+
 [type](https://nodejs.org/api/os.html#ostype)
+
+[uptime](https://nodejs.org/api/os.html#osuptime)
+
+[userInfo](https://nodejs.org/api/os.html#osuserinfooptions)
+
+[version](https://nodejs.org/api/os.html#osversion)
 
 ## path
 

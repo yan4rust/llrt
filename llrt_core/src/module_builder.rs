@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use crate::modules::{
+    assert::AssertModule,
     buffer::BufferModule,
     child_process::ChildProcessModule,
     console::ConsoleModule,
@@ -19,32 +20,34 @@ use crate::modules::{
     zlib::ZlibModule,
 };
 use llrt_modules::timers::TimersModule;
-pub use llrt_modules::ModuleInfo;
+pub use llrt_utils::module::ModuleInfo;
 use rquickjs::{
-    loader::{BuiltinResolver, ModuleLoader, Resolver},
+    loader::{ModuleLoader, Resolver},
     module::ModuleDef,
-    Ctx, Result,
+    Ctx, Error, Result,
 };
 
 #[derive(Debug, Default)]
 pub struct ModuleResolver {
-    builtin_resolver: BuiltinResolver,
+    modules: HashSet<String>,
 }
 
 impl ModuleResolver {
     #[must_use]
     pub fn with_module<P: Into<String>>(mut self, path: P) -> Self {
-        self.builtin_resolver.add_module(path.into());
+        self.modules.insert(path.into());
         self
     }
 }
 
 impl Resolver for ModuleResolver {
-    fn resolve(&mut self, ctx: &Ctx<'_>, base: &str, name: &str) -> Result<String> {
-        // Strip node prefix so that we support both with and without
-        let name = name.strip_prefix("node:").unwrap_or(name);
-
-        self.builtin_resolver.resolve(ctx, base, name)
+    fn resolve(&mut self, _: &Ctx<'_>, base: &str, name: &str) -> Result<String> {
+        let name = name.trim_start_matches("node:");
+        if self.modules.contains(name) {
+            Ok(name.into())
+        } else {
+            Err(Error::new_resolving(base, name))
+        }
     }
 }
 
@@ -65,6 +68,7 @@ pub struct ModuleBuilder {
 impl Default for ModuleBuilder {
     fn default() -> Self {
         Self::new()
+            .with_module(AssertModule)
             .with_module(CryptoModule)
             .with_global(crate::modules::crypto::init)
             .with_global(crate::modules::util::init)
@@ -74,6 +78,7 @@ impl Default for ModuleBuilder {
             .with_module(TimersModule)
             .with_module(EventsModule)
             .with_global(crate::modules::events::init)
+            .with_global(crate::modules::abort::init)
             .with_module(ModuleModule)
             .with_module(NetModule)
             .with_module(ConsoleModule)

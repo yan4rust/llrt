@@ -98,31 +98,38 @@ The test runner also has support for filters. Using filters is as simple as addi
 > [!NOTE]
 > LLRT only support a fraction of the Node.js APIs. It is **NOT** a drop in replacement for Node.js, nor will it ever be. Below is a high level overview of partially supported APIs and modules. For more details consult the [API](API.md) documentation
 
-|               | Node.js | LLRT ⚠️ |
+| Modules       | Node.js | LLRT ⚠️ |
 | ------------- | ------- | ------- |
+| assert        | ✔︎     | ✔︎️    |
 | buffer        | ✔︎     | ✔︎️    |
-| streams       | ✔︎     | ✔︎\*   |
 | child_process | ✔︎     | ✔︎⏱   |
-| net:sockets   | ✔︎     | ✔︎⏱   |
-| net:server    | ✔︎     | ✔︎     |
-| tls           | ✔︎     | ✘⏱     |
-| fetch         | ✔︎     | ✔︎     |
-| http          | ✔︎     | ✘⏱\*\* |
-| https         | ✔︎     | ✘⏱\*\* |
+| console       | ✔︎     | ✔︎     |
+| crypto        | ✔︎     | ✔︎     |
+| events        | ✔︎     | ✔︎     |
 | fs/promises   | ✔︎     | ✔︎     |
 | fs            | ✔︎     | ✘⏱     |
+| http          | ✔︎     | ✘⏱\*\* |
+| https         | ✔︎     | ✘⏱\*\* |
+| net:sockets   | ✔︎     | ✔︎⏱   |
+| net:server    | ✔︎     | ✔︎     |
+| os            | ✔︎     | ✔︎     |
 | path          | ✔︎     | ✔︎     |
-| timers        | ✔︎     | ✔︎     |
-| crypto        | ✔︎     | ✔︎     |
+| perf_hooks    | ✔︎     | ✔︎     |
 | process       | ✔︎     | ✔︎     |
-| encoding      | ✔︎     | ✔︎     |
-| console       | ✔︎     | ✔︎     |
-| events        | ✔︎     | ✔︎     |
+| streams       | ✔︎     | ✔︎\*   |
+| timers        | ✔︎     | ✔︎     |
+| url           | ✔︎     | ✔︎     |
+| tls           | ✔︎     | ✘⏱     |
 | zlib          | ✔︎     | ✔︎     |
-| ESM           | ✔︎     | ✔︎     |
-| CJS           | ✔︎     | ✔︎     |
-| async/await   | ✔︎     | ✔︎     |
 | Other modules | ✔︎     | ✘       |
+
+| Features    | Node.js | LLRT ⚠️ |
+| ----------- | ------- | ------- |
+| async/await | ✔︎     | ✔︎     |
+| encoding    | ✔︎     | ✔︎     |
+| fetch       | ✔︎     | ✔︎     |
+| ESM         | ✔︎     | ✔︎     |
+| CJS         | ✔︎     | ✔︎     |
 
 _⚠️ = partially supported in LLRT_<br />
 _⏱ = planned partial support_<br />
@@ -147,7 +154,7 @@ LLRT can work with any bundler of your choice. Below are some configurations for
 ### ESBuild
 
 ```shell
-esbuild index.js --platform=node --target=es2023 --format=esm --bundle --minify --external:@aws-sdk --external:@smithy
+esbuild index.js --platform=browser --target=es2023 --format=esm --bundle --minify --external:@aws-sdk --external:@smithy
 ```
 
 ### Rollup
@@ -369,12 +376,12 @@ There are many cases where LLRT shows notable performance drawbacks compared wit
 
 Clone code and cd to directory
 
-    git clone git@github.com:awslabs/llrt.git --recursive
+    git clone git@github.com:awslabs/llrt.git
     cd llrt
 
-Install git submodules if you've not cloned the repository with `--recursive`
+Install git submodules
 
-    git submodule update --init
+    git submodule update --init --checkout
 
 Install rust
 
@@ -521,6 +528,10 @@ Space-delimited list of hosts or socket paths which should be denied for network
 ### `LLRT_NET_POOL_IDLE_TIMEOUT=value`
 
 Set a timeout in seconds for idle sockets being kept-alive. Default timeout is 15 seconds
+
+### `LLRT_PLATFORM=value`
+
+Used to explicitly specify a preferred platform for the Node.js package resolver. The default is `browser`. If `node` is specified, "node" takes precedence in the search path. If a value other than `browser` or `node` is specified, it will behave as if "browser" was specified.
 
 ### `LLRT_TLS_VERSION=value`
 

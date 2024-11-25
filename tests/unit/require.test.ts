@@ -1,6 +1,9 @@
 globalThis._require = require; //used to preserve require during bundling/minification
-
 const CWD = process.cwd();
+import { spawn } from "child_process";
+
+import { platform } from "os";
+const IS_WIN = platform() === "win32";
 
 it("should require a file (absolute path)", () => {
   const { hello } = _require(`${CWD}/fixtures/hello.js`);
@@ -55,7 +58,7 @@ it("should handle cjs requires", () => {
 });
 
 it("should handle cjs requires", () => {
-  const a = _require(`${CWD}/fixtures/e.cjs`);
+  const a = _require(`${CWD}/fixtures/prop-export.cjs`);
 
   expect(a.prop).toEqual("a");
 });
@@ -85,7 +88,57 @@ it("should be able to import exported functions", () => {
 });
 
 it("should return same value for multiple require statements", () => {
-  const a = _require(`${CWD}/fixtures/e.cjs`);
-  const b = _require(`${CWD}/fixtures/e.cjs`);
+  const filename = `${CWD}/fixtures/prop-export.cjs`;
+  const a = _require(filename);
+  const b = _require(filename);
   expect(a).toStrictEqual(b);
+});
+
+it("should return all props", () => {
+  const a = _require(`${CWD}/fixtures/define-property-export.cjs`);
+  expect(a.__esModule).toBe(true);
+});
+
+it("should import cjs modules using import statement", async () => {
+  const filename = `${CWD}/fixtures/prop-export.cjs`;
+  const a = await import(filename);
+  const b = await import(filename);
+  const c = _require(filename);
+  expect(a).toStrictEqual(b);
+  expect(a.default).toStrictEqual(c);
+  expect(b.default).toStrictEqual(c);
+});
+
+it("should handle inner referenced exports", () => {
+  const a = _require(`${CWD}/fixtures/referenced-exports.cjs`);
+  expect(a.cat()).toBe("str");
+  expect(a.length()).toBe(1);
+});
+
+if (!IS_WIN) {
+  it("should handle named exports from CJS imports", (cb) => {
+    spawn(process.argv0, [
+      "-e",
+      `import {cat} from "${CWD}/fixtures/referenced-exports.cjs"`,
+    ]).on("close", (code) => {
+      expect(code).toBe(0);
+      cb();
+    });
+  });
+}
+
+it("require builtin modules", () => {
+  _require("path");
+});
+
+it("require `debug` module element", () => {
+  _require(`${CWD}/fixtures/test_modules/test-debug.js`);
+});
+
+it("require `lodash.merge` module element", () => {
+  _require(`${CWD}/fixtures/test_modules/test-lodash.merge.js`);
+});
+
+it("require `uuid` module element", () => {
+  _require(`${CWD}/fixtures/test_modules/test-uuid.js`);
 });

@@ -180,14 +180,15 @@ test: export JS_MINIFY = 0
 test: js
 	cargo run -- test -d bundle/js/__tests__/unit
 test-e2e: export JS_MINIFY = 0
+test-e2e: export TEST_TIMEOUT = 60000
+test-e2e: export SDK_BUNDLE_MODE = STD
 test-e2e: js
 	cargo run -- test -d bundle/js/__tests__/e2e
 
 test-ci: export JS_MINIFY = 0
 test-ci: export RUST_BACKTRACE = 1
-test-ci: export RUST_LOG = trace
 test-ci: clean-js | toolchain js
-	cargo $(TOOLCHAIN) -Z build-std -Z build-std-features test --target $(CURRENT_TARGET)  -- --nocapture --show-output
+	cargo $(TOOLCHAIN) -Z build-std -Z build-std-features test --target $(CURRENT_TARGET) -- --nocapture --show-output
 	cargo $(TOOLCHAIN) run -r --target $(CURRENT_TARGET) -- test -d bundle/js/__tests__/unit
 
 libs-arm64: lib/arm64/libzstd.a lib/zstd.h
